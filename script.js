@@ -416,7 +416,14 @@ const elements = {
     resetBtn: document.getElementById('reset-btn'),
 
     // Section headers
-    sectionHeaders: document.querySelectorAll('.section-header')
+    sectionHeaders: document.querySelectorAll('.section-header'),
+
+    // Modal
+    cssModal: document.getElementById('css-modal'),
+    cssOutput: document.getElementById('css-output'),
+    copyCssBtn: document.getElementById('copy-css'),
+    modalClose: document.getElementById('modal-close'),
+    copyToClipboard: document.getElementById('copy-to-clipboard')
 };
 
 // ========================================
@@ -981,6 +988,126 @@ function getContentBounds(svg) {
     };
 }
 
+/**
+ * Generate CSS code for the current text settings
+ * Creates text-shadow based RGB split effect
+ */
+function generateCSS() {
+    const s = state.settings;
+
+    // Get channel settings
+    const ch1 = hexToRgbNormalized(s.channel1Color);
+    const ch2 = hexToRgbNormalized(s.channel2Color);
+    const ch3 = hexToRgbNormalized(s.channel3Color);
+
+    const blendMode = s.allChannelsBlend || s.red.blend || 'screen';
+
+    // Generate SVG filter
+    const svgFilter = `<!-- RGB Split SVG Filter - Add this once to your site (e.g., in header or footer) -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none;">
+  <defs>
+    <filter id="rgb-split-filter" color-interpolation-filters="sRGB">
+      <!-- Channel 1 (${s.channel1Color}) -->
+      <feOffset in="SourceGraphic" dx="${s.red.x}" dy="${s.red.y}" result="ch1-offset"/>
+      <feColorMatrix in="ch1-offset" type="matrix" result="ch1"
+        values="${ch1.r} 0 0 0 0
+                0 ${ch1.g} 0 0 0
+                0 0 ${ch1.b} 0 0
+                0 0 0 ${s.red.opacity / 100} 0"/>
+      
+      <!-- Channel 2 (${s.channel2Color}) -->
+      <feOffset in="SourceGraphic" dx="${s.green.x}" dy="${s.green.y}" result="ch2-offset"/>
+      <feColorMatrix in="ch2-offset" type="matrix" result="ch2"
+        values="${ch2.r} 0 0 0 0
+                0 ${ch2.g} 0 0 0
+                0 0 ${ch2.b} 0 0
+                0 0 0 ${s.green.opacity / 100} 0"/>
+      
+      <!-- Channel 3 (${s.channel3Color}) -->
+      <feOffset in="SourceGraphic" dx="${s.blue.x}" dy="${s.blue.y}" result="ch3-offset"/>
+      <feColorMatrix in="ch3-offset" type="matrix" result="ch3"
+        values="${ch3.r} 0 0 0 0
+                0 ${ch3.g} 0 0 0
+                0 0 ${ch3.b} 0 0
+                0 0 0 ${s.blue.opacity / 100} 0"/>
+      
+      <!-- Blend all channels -->
+      <feBlend in="ch1" in2="ch2" mode="${blendMode}" result="blend1"/>
+      <feBlend in="blend1" in2="ch3" mode="${blendMode}"/>
+    </filter>
+  </defs>
+</svg>`;
+
+    // Generate CSS
+    const css = `/* ===========================================
+   RGB SPLIT EFFECT - Generated Code
+   =========================================== */
+
+${svgFilter}
+
+/* CSS - Apply to any element */
+.rgb-split-effect {
+  filter: url(#rgb-split-filter);
+}
+
+/* Example: Target WordPress Gutenberg headings */
+.wp-block-heading.has-rgb-split h2,
+h2.rgb-split-effect {
+  filter: url(#rgb-split-filter);
+}
+
+/* Container background (optional) */
+.rgb-split-container {
+  background-color: ${s.bgTransparent ? 'transparent' : s.bgColor};
+}
+
+/* ===========================================
+   USAGE INSTRUCTIONS:
+   1. Copy the SVG code and paste it in your 
+      theme's header.php or footer.php
+      (or use a "Custom HTML" block/widget)
+   
+   2. Add the class "rgb-split-effect" to any
+      element you want to apply the effect to
+   
+   3. In Gutenberg: Add "rgb-split-effect" to
+      the "Additional CSS class" field in the
+      block's Advanced settings
+   =========================================== */`;
+
+    return css;
+}
+
+function showCssModal() {
+    const css = generateCSS();
+    elements.cssOutput.value = css;
+    elements.cssModal.classList.add('active');
+}
+
+function hideCssModal() {
+    elements.cssModal.classList.remove('active');
+}
+
+async function copyToClipboard() {
+    try {
+        await navigator.clipboard.writeText(elements.cssOutput.value);
+        elements.copyToClipboard.textContent = 'Copied!';
+        elements.copyToClipboard.classList.add('copy-success');
+        setTimeout(() => {
+            elements.copyToClipboard.textContent = 'Copy to Clipboard';
+            elements.copyToClipboard.classList.remove('copy-success');
+        }, 2000);
+    } catch (err) {
+        // Fallback for older browsers
+        elements.cssOutput.select();
+        document.execCommand('copy');
+        elements.copyToClipboard.textContent = 'Copied!';
+        setTimeout(() => {
+            elements.copyToClipboard.textContent = 'Copy to Clipboard';
+        }, 2000);
+    }
+}
+
 // ========================================
 // Event Listeners
 // ========================================
@@ -1334,11 +1461,36 @@ function initWheelControls() {
 }
 
 // ========================================
+// Modal Event Listeners
+// ========================================
+
+function initModalListeners() {
+    elements.copyCssBtn.addEventListener('click', showCssModal);
+    elements.modalClose.addEventListener('click', hideCssModal);
+    elements.copyToClipboard.addEventListener('click', copyToClipboard);
+
+    // Close modal when clicking overlay
+    elements.cssModal.addEventListener('click', (e) => {
+        if (e.target === elements.cssModal) {
+            hideCssModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.cssModal.classList.contains('active')) {
+            hideCssModal();
+        }
+    });
+}
+
+// ========================================
 // Initialize
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
+    initModalListeners();
     syncUIWithState();
     render();
 });

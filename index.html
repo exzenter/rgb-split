@@ -71,6 +71,7 @@
                 <div class="preview-header">
                     <h2>Preview</h2>
                     <div class="preview-actions">
+                        <button id="copy-css" class="btn btn-secondary">Copy CSS</button>
                         <button id="export-png" class="btn btn-secondary">Export PNG</button>
                         <button id="export-svg" class="btn btn-primary">Export SVG</button>
                     </div>
@@ -82,6 +83,22 @@
                 </div>
             </section>
         </main>
+
+        <!-- CSS Modal -->
+        <div class="modal-overlay" id="css-modal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>CSS Code</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="css-output" readonly></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button id="copy-to-clipboard" class="btn btn-primary">Copy to Clipboard</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Settings Panel -->
         <aside class="settings-panel">
